@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CPU Information</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h1>CPU Information</h1>
+<p>Average CPU Load Percentage: <span id="cpu-load"></span>%</p>
+<div id="cpu-loads"></div>
+<p>CPU Info: <span id="cpu-info"></span></p>
+
+<script>
+    var socket = new SockJS('/websocket');
+    var stompClient = Stomp.over(socket);
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/cpu', function (message) {
+            var cpuData = JSON.parse(message.body);
+
+            // Calculate the average CPU load percentage
+            var totalLoad = 0;
+            cpuData.loadPercentages.forEach(function(load) {
+                totalLoad += load;
+            });
+            var averageCpuLoadPercentage = (cpuData.loadPercentages.length > 0) ? (totalLoad / cpuData.loadPercentages.length).toFixed(2) : 0;
+
+            // Update the average CPU load percentage
+            document.getElementById('cpu-load').innerText = averageCpuLoadPercentage;
+
+            // Update the load percentage for each core
+            var cpuLoadsDiv = document.getElementById('cpu-loads');
+            cpuLoadsDiv.innerHTML = ''; // Clear previous content
+            cpuData.loadPercentages.forEach(function(load, index) {
+                var p = document.createElement('p');
+                p.innerText = 'Core ' + index + ': ' + load.toFixed(2) + '%';
+                cpuLoadsDiv.appendChild(p);
+            });
+
+            // Update the CPU info
+            document.getElementById('cpu-info').innerText = cpuData.info;
+        });
+    });
+</script>
+</body>
+</html>
+
